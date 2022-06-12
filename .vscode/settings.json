@@ -1,3 +1,10 @@
 {
-    "makefile.extensionOutputFolder": "./.vscode"
+  "makefile.extensionOutputFolder": "./.vscode",
+  "files.associations": {
+    "limits": "c",
+    "*.tcc": "c",
+    "restaurant.h": "c",
+    "treap.h": "c",
+    "stdio.h": "c"
+  }
 }

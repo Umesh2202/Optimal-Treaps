@@ -1,6 +1,4 @@
-make --dry-run --always-make --keep-going --print-directory
-make: Entering directory '/run/media/umesh/New Volume/Umesh/Software/Codes/Code/C tracked/treaps'
-gcc -c treap.c
-gcc -o all treap.o
-make: Leaving directory '/run/media/umesh/New Volume/Umesh/Software/Codes/Code/C tracked/treaps'
- 
+make.exe --dry-run --always-make --keep-going --print-directory
+'make.exe' is not recognized as an internal or external command,
+operable program or batch file.
+

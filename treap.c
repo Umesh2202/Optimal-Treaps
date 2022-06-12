@@ -1,17 +1,6 @@
 //! PRIORITY IS DEFAULT 1
 
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-
-typedef struct node
-{
-    int priority;
-    char data[100];
-    struct node *right;
-    struct node *left;
-    struct node *parent;
-} treap;
+#include "treap.h"
 
 treap *init_treap(treap *t)
 {
@@ -21,13 +10,17 @@ treap *init_treap(treap *t)
 
 void heapify(treap *t);
 
-treap *insert_treap(treap *t, char key[], treap *p)
+int check_imbalance(treap *t);
+
+treap *perform_rot(treap *t);
+
+treap *insert_treap(treap *t, char key[], treap *p, int priority)
 {
 
     if (t == NULL)
     {
         treap *temp = (treap *)malloc(sizeof(treap));
-        (temp)->priority = 1;
+        (temp)->priority = priority;
         (temp)->right = NULL;
         (temp)->left = NULL;
         (temp)->parent = p;
@@ -39,21 +32,29 @@ treap *insert_treap(treap *t, char key[], treap *p)
 
     if (strcmp(key, (t)->data) < 0)
     {
-        (t)->left = insert_treap((t)->left, key, p);
+        (t)->left = insert_treap((t)->left, key, p, priority);
     }
     else if (strcmp(key, (t)->data) > 0)
     {
-        (t)->right = insert_treap((t)->right, key, p);
+        (t)->right = insert_treap((t)->right, key, p, priority);
     }
     else
     {
-        (t)->priority++;
+        (t)->priority += priority;
     }
 
-    treap *temp = t;
-    heapify(temp);
+    int bf = check_imbalance(t);
+    // printf("\n\n%d\n\n", bf);
 
-    return temp;
+    // treap *temp = t;
+    if (bf == 1)
+    {
+        return perform_rot(t);
+    }
+    // temp = t;
+    // heapify(temp);
+
+    return t;
 }
 
 int max_num(int x, int y, int z)
@@ -110,72 +111,282 @@ void inorder(treap *t)
     }
 }
 
-void rebalance(treap *t)
+void delete (treap *t)
 {
-    if (t->left == NULL && t->right == NULL)
-        return;
-    treap *t_l = t->left;
-    treap *t_r = t->right;
-    if (strcmp(t->data, t_r->data) > 0 && t_l == NULL) //* right less than root and left NULL
+    if (t->left == NULL && t->right == NULL) //*Zero child
     {
-        t->left = t_r;
-        t->right = NULL;
-        rebalance(t);
-        rebalance(t->left);
+        if (t->parent->left == t)
+            t->parent->left = NULL;
+        else
+            t->parent->right = NULL;
+        free(t);
     }
-    else if (strcmp(t->data, t_l->data) < 0 && t_r == NULL) //* left more than root and right NULL
+
+    else if (t->left != NULL && t->right == NULL) //*One child,left child
     {
-        t->right = t_l;
-        t->left = NULL;
-        rebalance(t);
-        rebalance(t->right);
+        treap *temp = t->left;
+
+        if (t->parent->left == t)
+            t->parent->left = temp;
+        else
+            t->parent->right = temp;
+
+        temp->parent = t->parent;
+        free(t);
+    }
+    else if (t->left == NULL && t->right != NULL) //*One child,right child
+    {
+        treap *temp = t->right;
+
+        if (t->parent->left == t)
+            t->parent->left = temp;
+        else
+            t->parent->right = temp;
+
+        temp->parent = t->parent;
+        free(t);
+    }
+
+    else if (t->left != NULL && t->right != NULL) //*Two child
+    {
+        treap *temp;
+
+        if (t->parent->left == t)
+        {
+            temp = t->right;
+            while (temp->left != NULL)
+            {
+                temp = temp->left;
+            }
+        }
+        else if (t->parent->right == t)
+        {
+            temp = t->left;
+            while (temp->right != NULL)
+            {
+                temp = temp->right;
+            }
+        }
+
+        swap(&(t->priority), &(temp->priority));
+        swap_str(t->data, temp->data);
+        delete (temp);
     }
 }
 
-int main()
+void rebalance(treap *t)
 {
-    treap *t;
-    treap *p = NULL;
-    char arr[100];
-    int choice;
-    t = init_treap(t);
-
-    while (1)
+    if (t == NULL || (t->left == NULL && t->right == NULL))
     {
-        printf("\n1. Insert in heap\n");
-        printf("2. Inorder\n");
-        printf("Enter a choice: ");
-        scanf("%d", &choice);
+        return;
+    }
 
-        switch (choice)
+    if (t->left != NULL && t->right == NULL)
+    {
+
+        if (strcmp(t->left->data, t->data) > 0) //*Left string is greater than root string
         {
-        case 1:
-        {
-            printf("\nEnter the string to insert: ");
-            scanf("%s", arr);
-            if (t == NULL)
-            {
-                t = insert_treap(t, arr, p);
-            }
-            else
-            {
-                treap *temp = t;
-                insert_treap(temp, arr, p);
-            }
-            // rebalance(t);
-            break;
-        }
-        case 2:
-            printf("\n");
-            inorder(t);
-            printf("\n");
-            break;
+            treap *temp = t->left;
+            char arr1[100];
+            strcpy(arr1, temp->data);
+            int pr = temp->priority;
+            delete (temp);
+
+            treap *p = t;
+            insert_treap(t, arr1, p, pr);
+            rebalance(t);
         }
     }
-    // t = insert_treap(t, "c", p);
-    // insert_treap(t, "a", p);
-    // insert_treap(t, "b", p);
-    // printf("%s", t->left->right->data);
-    // inorder(t);
-    // printf("%s", t->data);
+
+    else if (t->left == NULL && t->right != NULL) //*Right string is greater than root string
+    {
+        if (strcmp(t->right->data, t->data) < 0)
+        {
+            treap *temp = t->right;
+            char arr1[100];
+            strcpy(arr1, temp->data);
+            int pr = temp->priority;
+            delete (temp);
+
+            treap *p = t;
+            insert_treap(t, arr1, p, pr);
+            rebalance(t);
+        }
+    }
+
+    else if (t->left != NULL && t->right != NULL) //*Both child of root node
+    {
+
+        if (strcmp(t->left->data, t->data) > 0) //*Left string is greater than root string
+        {
+            treap *temp = t->left;
+            char arr1[100];
+            strcpy(arr1, temp->data);
+            int pr = temp->priority;
+            delete (temp);
+
+            treap *p = t;
+            insert_treap(t, arr1, p, pr);
+            rebalance(t);
+        }
+
+        else if (strcmp(t->right->data, t->data) < 0) //*Right string is greater than root string
+        {
+            treap *temp = t->right;
+            char arr1[100];
+            strcpy(arr1, temp->data);
+            int pr = temp->priority;
+            delete (temp);
+
+            treap *p = t;
+            insert_treap(t, arr1, p, pr);
+            rebalance(t);
+        }
+    }
+    rebalance(t->left);
+    rebalance(t->right);
+    heapify(t);
+}
+
+void show_recommendation(treap *t)
+{
+    inorder(t);
+    if (t != NULL)
+    {
+        printf("\t\t\t\t\t\t\t\t\tOur top orders !!!-----------\n");
+        printf("\n\n\t\t\t\t\t\t\t\t\t| %s", t->data);
+        if (t->left != NULL)
+            printf("\n\n\t\t\t\t\t\t\t\t\t| %s", t->left->data);
+        if (t->right != NULL)
+            printf("\n\n\t\t\t\t\t\t\t\t\t| %s", t->right->data);
+        printf("\n\n");
+    }
+}
+
+int height(treap *t)
+{
+    if (t == NULL)
+    {
+        return -1;
+    }
+    int a = height(t->left);
+    int b = height(t->right);
+    if (a >= b)
+    {
+        return a + 1;
+    }
+    else
+        return b + 1;
+}
+
+int check_imbalance(treap *t)
+{
+    if (abs(height(t->left) - height(t->right)) == 2)
+        return 1;
+    return 0;
+}
+
+treap *Rotate_LL(treap *t)
+{
+    printf("LL ");
+    treap *tl = t->left;
+    treap *tlr = tl->right;
+
+    t->left = tlr;
+
+    tl->right = t;
+
+    if (tlr != NULL)
+    {
+        tlr->parent = t;
+    }
+
+    t->parent = tl;
+
+    tl->parent = t->parent;
+
+    return tl;
+}
+
+treap *Rotate_RR(treap *t)
+{
+    printf("RR");
+    treap *tr = t->right;
+    treap *trl = tr->left;
+
+    t->right = trl;
+
+    tr->left = t;
+
+    if (trl != NULL)
+    {
+        trl->parent = t;
+    }
+
+    t->parent = tr;
+
+    tr->parent = t->parent;
+
+    return tr;
+}
+
+treap *Rotate_LR(treap *t)
+{
+    printf("LR");
+    treap *tl = t->left;
+    treap *tlr = tl->right;
+
+    t->left = tlr;
+    tlr->parent = t;
+
+    tlr->left = tl;
+    tl->parent = tlr;
+
+    tlr = Rotate_LL(t);
+
+    return tlr;
+}
+
+treap *Rotate_RL(treap *t)
+{
+    printf("RL");
+    treap *tr = t->right;
+    treap *trl = tr->left;
+
+    t->right = trl;
+    trl->parent = t;
+
+    trl->right = tr;
+    tr->parent = trl;
+
+    trl = Rotate_RR(t);
+
+    return trl;
+}
+
+treap *perform_rot(treap *t)
+{
+    treap *l = t->left;
+    treap *r = t->right;
+    if (height(t->left) - height(t->right) == 2 && (height(l->left) - height(l->right)) == 1)
+    {
+        printf("1");
+        return Rotate_LL(t);
+    }
+    else if (height(t->left) - height(t->right) == -2 && (height(l->left) - height(l->right)) == -1)
+    {
+        printf("2");
+        return Rotate_RR(t);
+    }
+    else if (height(t->left) - height(t->right) == 2 && (height(l->left) - height(l->right)) == -1)
+    {
+        printf("3");
+        return Rotate_LR(t);
+    }
+    else if (height(t->left) - height(t->right) == -2 && (height(l->left) - height(l->right)) == 1)
+    {
+        printf("4");
+        return Rotate_RL(t);
+    }
+    return t;
 }
